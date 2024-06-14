@@ -52,7 +52,7 @@ class Config(BaseModel):
     listen_address: str = Field(default="::1")
     port: int = Field(default=6789)
     teams_version: Literal[1, 2] = Field(default=2)
-    debug: bool = Field(default=True)
+    debug: bool = Field(default=False)
     fetch_interval: int = Field(default=60)
     ignore_teams_images: bool = Field(default=True)
     update_teams_config: bool = Field(default=False)
