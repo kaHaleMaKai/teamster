@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+  <ul>
+  {% for path in paths | sort %}
+    <li>
+      <a href="/{{ type }}/{{ path.name }}">{{ path }}</a>
+    </li>
+  {% endfor %}
+  </ul>
+
+{% endblock content %}

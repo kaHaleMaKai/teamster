@@ -180,10 +180,7 @@ def create_app(config: Config, notifier: Notifier) -> Flask:
     @app.get("/images")
     def list_images() -> Response:
         images = (p.relative_to(config.image_dir) for p in config.image_dir.iterdir())
-        imgs = "\n".join(
-            f"""<li><a href="/images/{p.name}">{p}</a></li>""" for p in images
-        )
-        return f"<ul>{imgs}</ul>"
+        return render_template("file-listing.html", type="images", paths=images)
 
     @app.get("/images/<path:path>")
     def serve_images(path: str) -> Response:
@@ -195,10 +192,7 @@ def create_app(config: Config, notifier: Notifier) -> Flask:
         thumbnails = (
             p.relative_to(config.thumbnail_dir) for p in config.thumbnail_dir.iterdir()
         )
-        imgs = "\n".join(
-            f"""<li><a href="/thumbnails/{p.name}">{p}</a></li>""" for p in thumbnails
-        )
-        return f"<ul>{imgs}</ul>"
+        return render_template("file-listing.html", type="thumbnails", paths=thumbnails)
 
     @app.get("/thumbnails/<path:path>")
     def serve_thumbnails(path: str) -> Response:
