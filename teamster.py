@@ -5,6 +5,7 @@ import re
 import json
 from typing import TypeAlias, Iterable, TypedDict, Literal, Any, TypeVar
 from pathlib import Path
+from functools import wraps
 
 import dbus
 import click
@@ -209,7 +210,9 @@ def create_app(config: Config, notifier: Notifier) -> Flask:
             resp = files
         else:
             resp = {"videoBackgroundImages": files}
-        return json.dumps(resp)
+        response = FlaskResponse(json.dumps(resp))
+        response.content_type = "application/json"
+        return response
 
     return app
 
