@@ -14,7 +14,6 @@ from pydantic import BaseModel, Field
 
 BASE_DIR = Path(__file__).absolute().parent
 DEFAULT_IMAGE_DIR = "images"
-DEFAULT_THUMBNAIL_DIR = "thumbs"
 DEFAULT_THUMBNAIL_SIZE = (128, 128)
 V2_API_PREFIX = "/evergreen-assets/backgroundimages"
 ACCEPTED_SUFFIXES = ("png", "jpg", "jpeg", "gif")
@@ -25,7 +24,14 @@ if xdg_conf_dir := os.environ.get("XDG_CONFIG_DIR"):
     CONF_BASE_DIR = Path(xdg_conf_dir)
 else:
     CONF_BASE_DIR = Path.home() / ".config"
+
+if xdg_cache_dir := os.environ.get("XDG_CACHE_DIR"):
+    CACHE_BASE_DIR = Path(xdg_cache_dir)
+else:
+    CACHE_BASE_DIR = Path.home() / ".cache"
+
 DEFAULT_CONFIG_FILE = CONF_BASE_DIR / "teamster" / "config.json"
+DEFAULT_CACHE_DIR = CACHE_BASE_DIR / "teamster"
 TEAMS_CONFIG_FILE = CONF_BASE_DIR / "teams-for-linux" / "config.json"
 
 Response: TypeAlias = FlaskResponse | str
@@ -40,8 +46,8 @@ class ImageEntry(TypedDict):
 
 
 class Config(BaseModel):
-    image_dir: Path = Field(default=Path(BASE_DIR / DEFAULT_IMAGE_DIR))
-    thumbnail_dir: Path = Field(default=Path(BASE_DIR / DEFAULT_THUMBNAIL_DIR))
+    image_dir: Path = Field(default=BASE_DIR / DEFAULT_IMAGE_DIR)
+    thumbnail_dir: Path = Field(default=DEFAULT_CACHE_DIR)
     thumbnail_size: tuple[int, int] = Field(default=DEFAULT_THUMBNAIL_SIZE)
     listen_address: str = Field(default="::1")
     port: int = Field(default=6789)
@@ -50,6 +56,17 @@ class Config(BaseModel):
     fetch_interval: int = Field(default=60)
     ignore_teams_images: bool = Field(default=True)
     update_teams_config: bool = Field(default=False)
+
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        self.image_dir = (
+            self.image_dir if self.image_dir.is_absolute() else BASE_DIR / self.image_dir
+        )
+        self.thumbnail_dir = (
+            self.thumbnail_dir
+            if self.thumbnail_dir.is_absolute()
+            else BASE_DIR / self.thumbnail_dir
+        )
 
 
 def import_config(path: Path) -> Config:
