@@ -3,13 +3,15 @@ from __future__ import annotations
 import os
 import re
 import json
-from typing import TypeAlias, Iterable, TypedDict, Literal, Any
+from typing import TypeAlias, Iterable, TypedDict, Literal, Any, TypeVar
 from pathlib import Path
 
+import dbus
 import click
 from flask import Flask, send_from_directory, Response as FlaskResponse, render_template
 from PIL import Image
 from pydantic import BaseModel, Field
+from werkzeug.exceptions import HTTPException
 
 
 BASE_DIR = Path(__file__).absolute().parent
@@ -34,6 +36,7 @@ DEFAULT_CONFIG_FILE = CONF_BASE_DIR / "teamster" / "config.json"
 DEFAULT_CACHE_DIR = CACHE_BASE_DIR / "teamster"
 TEAMS_CONFIG_FILE = CONF_BASE_DIR / "teams-for-linux" / "config.json"
 
+E = TypeVar("E", bound=HTTPException)
 Response: TypeAlias = FlaskResponse | str
 
 
@@ -56,6 +59,7 @@ class Config(BaseModel):
     fetch_interval: int = Field(default=60)
     ignore_teams_images: bool = Field(default=True)
     update_teams_config: bool = Field(default=False)
+    notify: bool = Field(default=True)
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
@@ -67,6 +71,33 @@ class Config(BaseModel):
             if self.thumbnail_dir.is_absolute()
             else BASE_DIR / self.thumbnail_dir
         )
+
+
+class Notifier:
+    item = "org.freedesktop.Notifications"
+    low = 0
+    average = 1
+    critical = 2
+
+    def __init__(self, enabled: bool = True) -> None:
+        self._enabled = enabled
+        if enabled:
+            self._sender = dbus.Interface(
+                dbus.SessionBus().get_object(
+                    self.item, f"/{self.item}".replace(".", "/")
+                ),
+                self.item,
+            )
+
+            import atexit
+
+            atexit.register(self.send, "web server stoppinng…")
+
+    def send(
+        self, msg: str, title: str = "Teamster", urgency: int = 1, timeout: int = 3000
+    ) -> None:
+        if self._enabled:
+            self._sender.Notify("", 0, "", title, msg, [], {"urgency": urgency}, timeout)
 
 
 def import_config(path: Path) -> Config:
@@ -124,8 +155,15 @@ def find_file(path: Path) -> Path:
     return path.with_suffix("")
 
 
-def create_app(config: Config) -> Flask:
+def create_app(config: Config, notifier: Notifier) -> Flask:
     app = Flask("teamster")
+
+    @app.errorhandler(HTTPException)
+    def handle_exception(e: E) -> E:
+        if e.code != 404:
+            msg = f"{e.code} error in Teamster\n{e.description}"
+            notifier.send(msg, urgency=notifier.critical, timeout=5_000)
+        return e
 
     @app.after_request
     def add_headers(resp: FlaskResponse) -> FlaskResponse:
@@ -182,7 +220,7 @@ def create_app(config: Config) -> Flask:
     return app
 
 
-def update_config(config: Config) -> None:
+def update_config(config: Config, notifier: Notifier) -> None:
     TEAMS_CONFIG_FILE.parent.mkdir(exist_ok=True)
 
     teams_config: dict[str, Any]
@@ -202,6 +240,7 @@ def update_config(config: Config) -> None:
     if new_config != teams_config:
         with TEAMS_CONFIG_FILE.open("w") as f:
             json.dump(new_config, f)
+        notifier.send("restart Teams app due to config change")
         print("++++++++++++++++++++++++++++++++++++++++")
         print("")
         print("please restart Teams app due to config changes")
@@ -209,10 +248,10 @@ def update_config(config: Config) -> None:
         print("++++++++++++++++++++++++++++++++++++++++")
 
 
-def main(config: Config) -> None:
+def main(config: Config, notifier: Notifier) -> None:
     config.image_dir.mkdir(exist_ok=True)
     config.thumbnail_dir.mkdir(exist_ok=True)
-    create_app(config).run(
+    create_app(config, notifier).run(
         host=config.listen_address, port=config.port, debug=config.debug
     )
 
@@ -233,9 +272,12 @@ def run_cli(config: Path) -> None:
     else:
         print("config file does not exist, using default values")
         config_object = Config()
+
+    notifier = Notifier(enabled=config_object.notify)
+    notifier.send("starting web server…")
     if config_object.update_teams_config:
-        update_config(config_object)
-    main(config_object)
+        update_config(config_object, notifier)
+    main(config_object, notifier)
 
 
 if __name__ == "__main__":
