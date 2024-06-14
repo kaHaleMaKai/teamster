@@ -42,7 +42,7 @@ class ImageEntry(TypedDict):
 class Config(BaseModel):
     image_dir: Path = Field(default=Path(BASE_DIR / DEFAULT_IMAGE_DIR))
     thumbnail_dir: Path = Field(default=Path(BASE_DIR / DEFAULT_THUMBNAIL_DIR))
-    thumbnail_size: (tuple[int, int]) = Field(default=DEFAULT_THUMBNAIL_SIZE)
+    thumbnail_size: tuple[int, int] = Field(default=DEFAULT_THUMBNAIL_SIZE)
     listen_address: str = Field(default="::1")
     port: int = Field(default=6789)
     teams_version: Literal[1, 2] = Field(default=2)
@@ -69,7 +69,9 @@ def create_thumbnail(img: Path, thumb: Path, size: tuple[int, int]) -> None:
             raise IOError(f"could not create thumbnail for {img}") from e
 
 
-def get_file_listing(config: Config, base_dir: Path | None = None) -> Iterable[ImageEntry]:
+def get_file_listing(
+    config: Config, base_dir: Path | None = None
+) -> Iterable[ImageEntry]:
     base = base_dir or config.image_dir
     for p in base.iterdir():
         if p.is_dir():
@@ -91,12 +93,12 @@ def get_file_listing(config: Config, base_dir: Path | None = None) -> Iterable[I
             img_name = str(img) + (f".{new_ext}" if new_ext else "")
 
             yield {
-                    "filetype": new_ext or ext,
-                    "id": img.stem,
-                    "name": img.stem,
-                    "src":       f"{prefix}/images/{img_name}",
-                    "thumb_src": f"{prefix}/thumbnails/{img_name}",
-                    }
+                "filetype": new_ext or ext,
+                "id": img.stem,
+                "name": img.stem,
+                "src": f"{prefix}/images/{img_name}",
+                "thumb_src": f"{prefix}/thumbnails/{img_name}",
+            }
 
 
 def find_file(path: Path) -> Path:
@@ -116,12 +118,16 @@ def create_app(config: Config) -> Flask:
 
     @app.get("/")
     def index() -> Response:
-        return render_template("index.html", listen_address=config.listen_address, port=config.port)
+        return render_template(
+            "index.html", listen_address=config.listen_address, port=config.port
+        )
 
     @app.get("/images")
     def list_images() -> Response:
         images = (p.relative_to(config.image_dir) for p in config.image_dir.iterdir())
-        imgs = "\n".join(f"""<li><a href="/images/{p.name}">{p}</a></li>""" for p in images)
+        imgs = "\n".join(
+            f"""<li><a href="/images/{p.name}">{p}</a></li>""" for p in images
+        )
         return f"<ul>{imgs}</ul>"
 
     @app.get("/images/<path:path>")
@@ -131,14 +137,20 @@ def create_app(config: Config) -> Flask:
 
     @app.get("/thumbnails")
     def list_thumbnails() -> Response:
-        thumbnails = (p.relative_to(config.thumbnail_dir) for p in config.thumbnail_dir.iterdir())
-        imgs = "\n".join(f"""<li><a href="/thumbnails/{p.name}">{p}</a></li>""" for p in thumbnails)
+        thumbnails = (
+            p.relative_to(config.thumbnail_dir) for p in config.thumbnail_dir.iterdir()
+        )
+        imgs = "\n".join(
+            f"""<li><a href="/thumbnails/{p.name}">{p}</a></li>""" for p in thumbnails
+        )
         return f"<ul>{imgs}</ul>"
 
     @app.get("/thumbnails/<path:path>")
     def serve_thumbnails(path: str) -> Response:
         p = find_file(config.thumbnail_dir / path)
-        return send_from_directory(config.thumbnail_dir, p.relative_to(config.thumbnail_dir))
+        return send_from_directory(
+            config.thumbnail_dir, p.relative_to(config.thumbnail_dir)
+        )
 
     @app.get("/config.json")
     def serve_config_json() -> Response:
@@ -183,11 +195,20 @@ def update_config(config: Config) -> None:
 def main(config: Config) -> None:
     config.image_dir.mkdir(exist_ok=True)
     config.thumbnail_dir.mkdir(exist_ok=True)
-    create_app(config).run(host=config.listen_address, port=config.port, debug=config.debug)
+    create_app(config).run(
+        host=config.listen_address, port=config.port, debug=config.debug
+    )
 
 
 @click.command()
-@click.option("--config", "-c", default=DEFAULT_CONFIG_FILE, type=Path, show_default=True, help="path to config file")
+@click.option(
+    "--config",
+    "-c",
+    default=DEFAULT_CONFIG_FILE,
+    type=Path,
+    show_default=True,
+    help="path to config file",
+)
 def run_cli(config: Path) -> None:
     print(f"reading config file {config}")
     if config.exists():
