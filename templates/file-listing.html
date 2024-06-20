@@ -6,7 +6,7 @@
   <ul>
   {% for path in paths | sort %}
     <li>
-      <a href="/{{ type }}/{{ path.name }}">{{ path }}</a>
+      <a href="/{{ prefix }}/{{ path }}">{{ path.name }}</a>
     </li>
   {% endfor %}
   </ul>

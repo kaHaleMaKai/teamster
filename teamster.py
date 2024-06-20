@@ -12,7 +12,7 @@ import click
 from flask import Flask, send_from_directory, Response as FlaskResponse, render_template
 from PIL import Image
 from pydantic import BaseModel, Field
-from werkzeug.exceptions import HTTPException
+from werkzeug.exceptions import HTTPException, NotFound
 
 
 BASE_DIR = Path(__file__).absolute().parent
@@ -72,6 +72,14 @@ class Config(BaseModel):
             if self.thumbnail_dir.is_absolute()
             else BASE_DIR / self.thumbnail_dir
         )
+
+    def get_base_dir(self, prefix: str) -> Path:
+        if prefix == "images":
+            return self.image_dir
+        elif prefix == "thumbnails":
+            return self.thumbnail_dir
+        else:
+            raise KeyError(f"bad value for prefix. exptected: 'images' or 'thumbnails'. got: {prefix}")
 
 
 class Notifier:
@@ -159,6 +167,11 @@ def find_file(path: Path) -> Path:
 def create_app(config: Config, notifier: Notifier) -> Flask:
     app = Flask("teamster")
 
+    def list_files(dir: Path, prefix: Literal["images", "thumbnails"]) -> Response:
+        rel_dir = config.get_base_dir(prefix)
+        files = (p.relative_to(rel_dir) for p in dir.iterdir())
+        return render_template("file-listing.html", prefix=prefix, paths=files)
+
     @app.errorhandler(HTTPException)
     def handle_exception(e: E) -> E:
         if e.code != 404:
@@ -179,28 +192,26 @@ def create_app(config: Config, notifier: Notifier) -> Flask:
         )
 
     @app.get("/images")
+    @app.get("/images/")
     def list_images() -> Response:
-        images = (p.relative_to(config.image_dir) for p in config.image_dir.iterdir())
-        return render_template("file-listing.html", type="images", paths=images)
-
-    @app.get("/images/<path:path>")
-    def serve_images(path: str) -> Response:
-        p = find_file(config.image_dir / path)
-        return send_from_directory(config.image_dir, p.relative_to(config.image_dir))
+        return list_files(config.image_dir, prefix="images")
 
     @app.get("/thumbnails")
+    @app.get("/thumbnails/")
     def list_thumbnails() -> Response:
-        thumbnails = (
-            p.relative_to(config.thumbnail_dir) for p in config.thumbnail_dir.iterdir()
-        )
-        return render_template("file-listing.html", type="thumbnails", paths=thumbnails)
+        return list_files(config.thumbnail_dir, prefix="thumbnails")
 
-    @app.get("/thumbnails/<path:path>")
-    def serve_thumbnails(path: str) -> Response:
-        p = find_file(config.thumbnail_dir / path)
-        return send_from_directory(
-            config.thumbnail_dir, p.relative_to(config.thumbnail_dir)
-        )
+    @app.get("/<prefix>/<path:path>")
+    def serve_images(prefix: str, path: str) -> Response:
+        try:
+            rel_dir = config.get_base_dir(prefix)
+        except KeyError as e:
+            raise NotFound(str(e))
+        if (dir := rel_dir / path).is_dir():
+            return list_files(dir, prefix=prefix)  # type: ignore[arg-type]
+        else:
+            p = find_file(rel_dir / path)
+            return send_from_directory(rel_dir, p.relative_to(rel_dir))
 
     @app.get("/config.json")
     def serve_config_json() -> Response:
