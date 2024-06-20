@@ -4,6 +4,9 @@
 {% block content %}
 
   <ul>
+    <li>
+      <a href="{{ back }}/..">..</a>
+    </li>
   {% for path in paths | sort %}
     <li>
       <a href="/{{ prefix }}/{{ path }}">{{ path.name }}</a>
