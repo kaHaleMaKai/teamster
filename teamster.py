@@ -114,8 +114,6 @@ class Notifier:
     ) -> None:
         if self._enabled:
             self._sender.Notify("", 0, "", title, msg, [], {"urgency": urgency}, timeout)
-        else:
-
 
 
 def import_config(path: Path) -> Config:
