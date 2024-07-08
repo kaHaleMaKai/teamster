@@ -26,6 +26,10 @@ pip install -r requirements.txt
 python teamster.py
 ```
 
+## dbus
+
+If you want to receive desktop notifications from Teamster, please install `dbus-python`.
+
 # how to configure?
 
 ## Teams for Linux
