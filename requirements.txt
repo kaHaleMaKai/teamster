@@ -3,4 +3,3 @@ mypy
 ruff
 pillow
 pydantic
-dbus-python
