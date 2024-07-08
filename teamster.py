@@ -79,7 +79,9 @@ class Config(BaseModel):
         elif prefix == "thumbnails":
             return self.thumbnail_dir
         else:
-            raise KeyError(f"bad value for prefix. exptected: 'images' or 'thumbnails'. got: {prefix}")
+            raise KeyError(
+                f"bad value for prefix. exptected: 'images' or 'thumbnails'. got: {prefix}"
+            )
 
 
 class Notifier:
@@ -170,7 +172,9 @@ def create_app(config: Config, notifier: Notifier) -> Flask:
     def list_files(dir: Path, prefix: Literal["images", "thumbnails"]) -> Response:
         rel_dir = config.get_base_dir(prefix)
         files = (p.relative_to(rel_dir) for p in dir.iterdir())
-        return render_template("file-listing.html", prefix=prefix, paths=files, back=dir.relative_to(rel_dir))
+        return render_template(
+            "file-listing.html", prefix=prefix, paths=files, back=dir.relative_to(rel_dir)
+        )
 
     @app.errorhandler(HTTPException)
     def handle_exception(e: E) -> E:
