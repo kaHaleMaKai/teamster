@@ -7,7 +7,6 @@ from typing import TypeAlias, Iterable, TypedDict, Literal, Any, TypeVar
 from pathlib import Path
 from functools import wraps
 
-import dbus
 import click
 from flask import Flask, send_from_directory, Response as FlaskResponse, render_template
 from PIL import Image
@@ -92,7 +91,13 @@ class Notifier:
 
     def __init__(self, enabled: bool = True) -> None:
         self._enabled = enabled
-        if enabled:
+
+        try:
+            import dbus
+        except ModuleNotFoundError:
+            self._enabled = False
+
+        if self._enabled:
             self._sender = dbus.Interface(
                 dbus.SessionBus().get_object(
                     self.item, f"/{self.item}".replace(".", "/")
@@ -109,6 +114,8 @@ class Notifier:
     ) -> None:
         if self._enabled:
             self._sender.Notify("", 0, "", title, msg, [], {"urgency": urgency}, timeout)
+        else:
+
 
 
 def import_config(path: Path) -> Config:
