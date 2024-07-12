@@ -28,7 +28,13 @@ python teamster.py
 
 ## dbus
 
-If you want to receive desktop notifications from Teamster, please install `dbus-python`.
+If you want to receive desktop notifications from Teamster, please run `pip install dbus-python` after
+activating your virtual environment (`source .venv/bin/activate`).
+
+# beware
+
+You will _always_ have to start _Teamster_ before starting _Teams-for-Linux_. Else you might not be able to
+see any backgrounds in it. In case _Teamster_ crashes during your use of _Teams-for-Linux_, you might need to stop _Teams-for-Linux_ and start _Teamster_ first.
 
 # how to configure?
 
@@ -74,7 +80,7 @@ When setting `update_teams_config=true`, then some options such the URL of the T
 written into the _Teams for Linux_ config. If you do not wish that, please add it manually (e.g.
 `{"customBGServiceBaseUrl": "http://localhost:6789"}`).
 
-# Systemd
+## Systemd
 
 If you wish to run this web service via `systemd`, you can execute `./install-service.sh` from this repository. It will
 create a user-scoped service called `teamster.service`, that you can start/stop via
@@ -92,3 +98,28 @@ journalctl --user -u teamster
 # or, for a quick overview
 systemctl --user status teamster
 ```
+
+# endpoints
+
+When opening the _Teamster_ base url (per default: `http://localhost:6789`), you will see
+a simple HTML page that looks likes this
+
+* `config.json` – exposes the complete list of images to _Teams-for-Linux_
+`* images/` – simple directory serving of your image folder for debugging
+`* thumbnails/` – simple directory serving of your thumbnail folder for debugging
+
+The `config.json` endpoint is required by Teams itself. It delivers both the information what
+images are served, and their URLs. Additionally, Teams wants to show a thumbnail of the background
+images. Those are get on-the-fly when calling `config.json` ifn ot existent. Thus, on subsequent calls
+the thumbnails will get served from disk.
+
+# debugging
+
+If you do not see any custom backgrounds in _Teams-for-Linux_, please check if
+
+* _Teamster_ running,
+* _Teamster_ serves the images,
+* _Teamster_ hasn't crashed
+
+When in doubt, please stop _Teams-for-Linux_, start _Teamster_ and only then again
+_Teams-for-Linux_.
