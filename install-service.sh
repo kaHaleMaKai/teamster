@@ -44,11 +44,11 @@ main() {
   echo >&2
   echo 'Now, you can run
 
-  systemctl --user enable playoffs.service
+  systemctl --user enable teamster.service
 
 to enable the service after booting, and
 
-  systemctl --user start playoffs.service
+  systemctl --user start teamster.service
 
 to start it directly.
 ' >&2
