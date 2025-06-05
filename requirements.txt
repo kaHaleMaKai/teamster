@@ -1,5 +1,0 @@
-flask
-mypy
-ruff
-pillow
-pydantic
