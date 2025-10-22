@@ -20,9 +20,19 @@ into a new virtual environment:
 ```bash
 git clone https://github.com/kaHaleMaKai/teamster.git
 cd teamster
+
+# setup the project with uv
+# for pip die-hards, please cf. below
+uv venv .venv
+source .venv/bin/activate
+uv pip install -r pyproject.toml
+
+# old-school pip setup
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r pyproject.toml
+
+# run it
 python teamster.py
 ```
 
